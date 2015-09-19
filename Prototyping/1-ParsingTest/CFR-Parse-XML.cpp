@@ -11,6 +11,7 @@ namespace
 void DisplayChapter (pugi::xml_node chapter);
 void DisplaySubchapter (pugi::xml_node subchapter);
 void DisplayPart (pugi::xml_node part);
+void DisplaySubpart (pugi::xml_node part);
 void DisplaySection (pugi::xml_node section);
 
 // Begin Implementation
@@ -47,6 +48,7 @@ int main (int argc, char *argv[])
 
 void DisplayChapter (pugi::xml_node chapter)
 {
+    // Display chapter title
     std::cout << chapter.child("TOC").child("TOCHD").child_value("HD") << std::endl;
     
     for (pugi::xml_node subchapter = chapter.first_child(); subchapter; subchapter = subchapter.next_sibling())
@@ -57,27 +59,40 @@ void DisplayChapter (pugi::xml_node chapter)
 
 void DisplaySubchapter (pugi::xml_node subchapter)
 {
+    // Display subchapter title
     std::cout << subchapter.child_value("HD") << std::endl;
     
     for (pugi::xml_node part = subchapter.child("PART"); part; part = part.next_sibling())
     {
         DisplayPart (part);
     }
+    
+    std::cout << std::endl;
 }
 
 void DisplayPart (pugi::xml_node part)
 {
+    // Display part title
     std::cout << part.child_value("HD") << std::endl;
     
     // From here we can either go on to SECTIONs or SUBPARTs
     
-    for (pugi::xml_node section = part.child("SECTION"); section; section = section.next_sibling())
-    {
-        DisplaySection (section);
-    }
+    // Determine is we have any SUBPARTs
+    // Do a find for subparts
+    // Or should we just iterate through all nodes here?
+    
+    //for (pugi::xml_node section = part.child("SECTION"); section; section = section.next_sibling())
+    //{
+    //    DisplaySection (section);
+    //}
+}
+
+void DisplaySubpart (pugi::xml_node part)
+{
+    
 }
 
 void DisplaySection (pugi::xml_node section)
 {
-    std::cout << section.child_value("SECTNO") << std::endl;
+    std::cout << section.child_value("SECTNO") << " - " << section.child_value("SUBJECT") << std::endl;
 }
