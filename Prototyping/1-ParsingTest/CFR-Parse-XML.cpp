@@ -1,10 +1,16 @@
 #include "pugixml.hpp"
 
+#include <fstream>
 #include <iostream>
+#include <sstream>
 
 namespace
 {
     const std::string FILENAME = "cfr-example.xml";
+    
+    // Cheating a bit by putting this in the anonymous namespace
+    std::ofstream outputStream;
+    const std::string OUTPUT_FILENAME = "cfr-output.txt";
 }
 
 // Forward Declarations
@@ -20,6 +26,8 @@ void OutputText (std::string text);
 // Begin Implementation
 int main (int argc, char *argv[]) 
 {
+    outputStream.open (OUTPUT_FILENAME);
+    
     // Load the target XML file for processing
     // TODO: process load errors
     pugi::xml_document doc;
@@ -32,11 +40,11 @@ int main (int argc, char *argv[])
     
     pugi::xml_node frontMatter = doc.child("CFRDOC").child("FMTR");
     
-    std::cout << frontMatter.child("TITLEPG").child_value("TITLENUM") << std::endl;
-    std::cout << frontMatter.child("TITLEPG").child_value("SUBJECT") << std::endl;
-    std::cout << frontMatter.child("TITLEPG").child_value("PARTS") << std::endl;
+    OutputText (frontMatter.child("TITLEPG").child_value("TITLENUM"));
+    OutputText (frontMatter.child("TITLEPG").child_value("SUBJECT"));
+    OutputText (frontMatter.child("TITLEPG").child_value("PARTS"));
 
-    std::cout << "--------------------------------------" << std::endl;
+    OutputText ("--------------------------------------");
 
     // --- CHAPTER ------------------------------------------------------------------
     
@@ -54,16 +62,20 @@ int main (int argc, char *argv[])
     // There really isn't anything we want to display in the back matter
     // This is just stubbed out in case we want to use it in the future
 
-    std::cout << "--------------------------------------" << std::endl;
+    OutputText ("--------------------------------------");
 
     pugi::xml_node backMatter = doc.child("CFRDOC").child("BMTR");
 
+    // ------------------------------------------------------------------------------
+
+    outputStream.close();
+    
 }
 
 void DisplayChapter (pugi::xml_node chapter)
 {
     // Display chapter title
-    std::cout << chapter.child("TOC").child("TOCHD").child_value("HD") << std::endl;
+    OutputText (chapter.child("TOC").child("TOCHD").child_value("HD"));
     
     // Process CHAPTER contents
     // Really, the only nodes we are interested in are SUBCHAPs
@@ -76,13 +88,15 @@ void DisplayChapter (pugi::xml_node chapter)
 
 void DisplaySubchapter (pugi::xml_node subchapter)
 {
-    // Display subchapter title
-    std::cout << std::endl << subchapter.child_value("HD") << std::endl;
-    
     // Process SUBCHAP contents
     // Really, the only nodes we are interested in are PARTs
     for (pugi::xml_node aNode = subchapter.first_child(); aNode; aNode = aNode.next_sibling())
     {
+        // Title
+        if (!strcmp(aNode.name(), "HD"))
+            OutputText (aNode.child_value("HD"));
+        
+        // Part
         if (!strcmp(aNode.name(), "PART"))
             DisplayPart (aNode);
     }
@@ -90,14 +104,15 @@ void DisplaySubchapter (pugi::xml_node subchapter)
 
 void DisplayPart (pugi::xml_node part)
 {
-    // Display part title
-    std::cout << std::endl << part.child_value("HD") << std::endl;
-    
     // Process PART contents
     // From here we can either go on to SECTIONs or SUBPARTs
     for (pugi::xml_node aNode = part.first_child(); aNode; aNode = aNode.next_sibling())
     {
         // Ignore EAR, HD, CONTENTS, AUTH, SOURCE, EDNOTE, APPENDIX
+            
+        // Title
+        if (!strcmp(aNode.name(), "HD"))
+            OutputText (aNode.child_value("HD"));
             
         // Subpart
         if (!strcmp(aNode.name(), "SUBPART"))
@@ -111,16 +126,15 @@ void DisplayPart (pugi::xml_node part)
 
 void DisplaySubpart (pugi::xml_node subpart)
 {
-    // Display subpart title
-    // Some subparts are reserved and have no title, so make sure to check
-    if (strcmp(subpart.child_value("HD"), ""))
-        std::cout << std::endl << subpart.child_value("HD") << std::endl;
-    
     // Process SUBPART contents
     // From here we can either go on to SECTIONs or SUBJGRPs
     for (pugi::xml_node aNode = subpart.first_child(); aNode; aNode = aNode.next_sibling())
     {
         // Ignore PRTPAGE, APPENDIX
+            
+        // Title
+        if (!strcmp(aNode.name(), "HD"))
+            OutputText (aNode.child_value("HD"));
             
         // Subject Group
         if (!strcmp(aNode.name(), "SUBJGRP"))
@@ -134,13 +148,14 @@ void DisplaySubpart (pugi::xml_node subpart)
 
 void DisplaySubjectGroup (pugi::xml_node subjectGroup)
 {
-    // Display subjectGroup title
-    std::cout << subjectGroup.child_value("HD") << std::endl;
-    
     // Not sure what SUBJGRPs are really for at this point,
     // but they do have SECTIONs, so let's at least process those
     for (pugi::xml_node aNode = subjectGroup.first_child(); aNode; aNode = aNode.next_sibling())
-    {            
+    {           
+        // Title
+        if (!strcmp(aNode.name(), "HD"))
+            OutputText (aNode.child_value("HD"));
+         
         // Section
         if (!strcmp(aNode.name(), "SECTION"))
             DisplaySection (aNode);
@@ -150,15 +165,27 @@ void DisplaySubjectGroup (pugi::xml_node subjectGroup)
 void DisplaySection (pugi::xml_node section)
 {
     // Display both the section number and the section title
-    std::cout << section.child_value("SECTNO") << " - " << section.child_value("SUBJECT") << std::endl;
+    std::string temp = std::string(section.child_value("SECTNO")) + std::string(" - ") + std::string(section.child_value("SUBJECT"));
+    OutputText (temp);
     
     // Process SECTION contents
-    // These are typically the actual rgulations
+    // These are typically the actual regulations
     for (pugi::xml_node aNode = section.first_child(); aNode; aNode = aNode.next_sibling())
     {            
+        // The paragraph tags are funny because they can have subelements that are less XML nodes
+        // and more like HTML tags, primarily for emphasis or formatting.  We build a stringstream
+        // here with all the components of the paragraph and then output that text
         if (!strcmp(aNode.name(), "P"))
         {
-            OutputText (aNode.child_value());
+            std::stringstream tempStream;
+            
+            for (pugi::xml_node bNode = aNode.first_child(); bNode; bNode = bNode.next_sibling())
+            {   
+                tempStream << bNode.child_value();
+            }
+            
+            tempStream << aNode.child_value();
+            OutputText (tempStream.str());
         }
     }
 }
@@ -167,5 +194,6 @@ void DisplaySection (pugi::xml_node section)
 // Helper method to display text in the console and save to a file
 void OutputText (std::string text)
 {
-    std::cout << text << std::endl;
+    std::cout << std::endl << text << std::endl;
+    outputStream << std::endl << text << std::endl;
 }
