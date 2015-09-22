@@ -14,7 +14,10 @@ namespace
 }
 
 // Forward Declarations
+void DisplayFrontMatter (pugi::xml_node chapter);
 void DisplayChapter (pugi::xml_node chapter);
+void DisplayBackMatter (pugi::xml_node chapter);
+
 void DisplaySubchapter (pugi::xml_node subchapter);
 void DisplayPart (pugi::xml_node part);
 void DisplaySubpart (pugi::xml_node part);
@@ -22,6 +25,8 @@ void DisplaySubjectGroup (pugi::xml_node part);
 void DisplaySection (pugi::xml_node section);
 
 void OutputText (std::string text);
+
+// ------------------------------------------------------------------------------
 
 // Begin Implementation
 int main (int argc, char *argv[]) 
@@ -39,22 +44,14 @@ int main (int argc, char *argv[])
     // Instead of making things complex just process by absolute path
     
     pugi::xml_node frontMatter = doc.child("CFRDOC").child("FMTR");
-    
-    OutputText (frontMatter.child("TITLEPG").child_value("TITLENUM"));
-    OutputText (frontMatter.child("TITLEPG").child_value("SUBJECT"));
-    OutputText (frontMatter.child("TITLEPG").child_value("PARTS"));
-
-    OutputText ("--------------------------------------");
+    DisplayFrontMatter (frontMatter);
 
     // --- CHAPTER ------------------------------------------------------------------
     
     // Chapters are more complex and the hierarchy is not known ahead of time
     // We will dynamically process the chapter contents for display/saving
     
-    // Display the chapter title
     pugi::xml_node chapter = doc.child("CFRDOC").child("TITLE").child("CHAPTER");
-    
-    // Process the chapter data
     DisplayChapter (chapter);
 
     // --- BACK MATTER --------------------------------------------------------------
@@ -62,14 +59,22 @@ int main (int argc, char *argv[])
     // There really isn't anything we want to display in the back matter
     // This is just stubbed out in case we want to use it in the future
 
-    OutputText ("--------------------------------------");
-
     pugi::xml_node backMatter = doc.child("CFRDOC").child("BMTR");
+    DisplayBackMatter (backMatter);
 
     // ------------------------------------------------------------------------------
 
     outputStream.close();
     
+}
+
+void DisplayFrontMatter (pugi::xml_node frontMatter)
+{
+    OutputText (frontMatter.child("TITLEPG").child_value("TITLENUM"));
+    OutputText (frontMatter.child("TITLEPG").child_value("SUBJECT"));
+    OutputText (frontMatter.child("TITLEPG").child_value("PARTS")); 
+    
+    OutputText ("--------------------------------------");
 }
 
 void DisplayChapter (pugi::xml_node chapter)
@@ -84,6 +89,12 @@ void DisplayChapter (pugi::xml_node chapter)
         if (!strcmp(aNode.name(), "SUBCHAP"))
             DisplaySubchapter (aNode);
     }
+}
+
+void DisplayBackMatter (pugi::xml_node backMatter)
+{
+    OutputText ("--------------------------------------");
+    // Does nothing for now - just a stub for future development
 }
 
 void DisplaySubchapter (pugi::xml_node subchapter)
